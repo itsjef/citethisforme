@@ -63,7 +63,7 @@ def cite_youtube(access_date, url):
     if url in success_db or url in failure_db:
         return
 
-    template = "YouTube. %s. %s. [online] Available at: <%s> [Accessed %s]."
+    template = "%s. %s. %s. [online] Available at: <%s> [Accessed %s]."
 
     print(url)
 
@@ -72,10 +72,11 @@ def cite_youtube(access_date, url):
         video_id = parse_qs(parsed_url.query)['v'][0]
         video_info = youtube_videos.list(part='snippet', id=video_id).execute()['items'][0]['snippet']
 
+        channel = video_info['channelTitle']
         year = video_info['publishedAt'][:4]
         title = video_info['title']
 
-        success_db[url] = template % (year, title, url, access_date)
+        success_db[url] = template % (channel, year, title, url, access_date)
         print("Success!")
     except Exception as e:
         failure_db[url] = str(e)
