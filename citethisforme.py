@@ -2,7 +2,10 @@
 import csv
 import json
 
+from urllib.parse import urlparse, parse_qs
+
 import selenium
+from googleapiclient.discovery import build
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -10,6 +13,12 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.expected_conditions import \
     presence_of_element_located
 from selenium.webdriver.support.ui import WebDriverWait
+
+API_KEY = ''
+YOUTUBE_API_SERVICE_NAME = 'youtube'
+YOUTUBE_API_VERSION = 'v3'
+
+youtube_videos = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION, developerKey=API_KEY).videos()
 
 success_db = {}
 failure_db = {}
@@ -40,7 +49,37 @@ def load_psv(filename: str) -> dict:
 
 def cite(driver, access_date, url, resource_type):
     if resource_type == "website":
-        cite_website(driver, access_date, url)
+        parsed_url = urlparse(url)
+
+        if parsed_url.netloc.lower().endswith("youtube.com"):
+            cite_youtube(access_date, url)
+        else:
+            cite_website(driver, access_date, url)
+
+
+def cite_youtube(access_date, url):
+    global success_db, failure_db
+
+    if url in success_db or url in failure_db:
+        return
+
+    template = "YouTube. %s. %s. [online] Available at: <%s> [Accessed %s]."
+
+    print(url)
+
+    try:
+        parsed_url = urlparse(url)
+        video_id = parse_qs(parsed_url.query)['v'][0]
+        video_info = youtube_videos.list(part='snippet', id=video_id).execute()['items'][0]['snippet']
+
+        year = video_info['publishedAt'][:4]
+        title = video_info['title']
+
+        success_db[url] = template % (year, title, url, access_date)
+        print("Success!")
+    except Exception as e:
+        failure_db[url] = str(e)
+        print("Failed! :(")
 
 
 def cite_website(driver, access_date, url):
