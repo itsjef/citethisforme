@@ -1,24 +1,28 @@
 #!/usr/bin/env python
 import csv
 import json
+from os import getenv
+from urllib.parse import parse_qs, urlparse
 
-from urllib.parse import urlparse, parse_qs
-
-import selenium
+from dotenv import load_dotenv
 from googleapiclient.discovery import build
 from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.expected_conditions import \
-    presence_of_element_located
+from selenium.webdriver.support.expected_conditions import presence_of_element_located
 from selenium.webdriver.support.ui import WebDriverWait
 
-API_KEY = ''
-YOUTUBE_API_SERVICE_NAME = 'youtube'
-YOUTUBE_API_VERSION = 'v3'
+load_dotenv(verbose=True)
 
-youtube_videos = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION, developerKey=API_KEY).videos()
+YOUTUBE_API_KEY = getenv("YOUTUBE_API_KEY")
+YOUTUBE_API_SERVICE_NAME = "youtube"
+YOUTUBE_API_VERSION = "v3"
+
+youtube_videos = build(
+    YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION, developerKey=YOUTUBE_API_KEY
+).videos()
 
 success_db = {}
 failure_db = {}
@@ -69,12 +73,14 @@ def cite_youtube(access_date, url):
 
     try:
         parsed_url = urlparse(url)
-        video_id = parse_qs(parsed_url.query)['v'][0]
-        video_info = youtube_videos.list(part='snippet', id=video_id).execute()['items'][0]['snippet']
+        video_id = parse_qs(parsed_url.query)["v"][0]
+        video_info = youtube_videos.list(part="snippet", id=video_id).execute()[
+            "items"
+        ][0]["snippet"]
 
-        channel = video_info['channelTitle']
-        year = video_info['publishedAt'][:4]
-        title = video_info['title']
+        channel = video_info["channelTitle"]
+        year = video_info["publishedAt"][:4]
+        title = video_info["title"]
 
         success_db[url] = template % (channel, year, title, url, access_date)
         print("Success!")
@@ -107,7 +113,7 @@ def cite_website(driver, access_date, url):
             failure_db[url] = "URL not found"
 
             return
-        except selenium.common.exceptions.NoSuchElementException as e:
+        except NoSuchElementException:
             # Cite
             results_list = driver.find_element_by_class_name("js-results-list")
             results_list.find_element_by_xpath("li/form/button").send_keys(Keys.RETURN)
@@ -149,7 +155,6 @@ if __name__ == "__main__":
 
     with open("./success.json", "w") as f:
         json.dump(success_db, f, ensure_ascii=False, indent=4)
-
 
     with open("./failure.json", "w") as f:
         json.dump(failure_db, f, ensure_ascii=False, indent=4)
