@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import csv
 import json
+from datetime import datetime
 from os import getenv
 from urllib.parse import parse_qs, urlparse
 
@@ -150,6 +151,9 @@ if __name__ == "__main__":
 
         for _type, resources in data.items():
             for access_date, urls in resources.items():
+                dt = datetime.strptime(access_date, "%d/%m/%Y")
+                access_date = dt.strftime("%d %B %Y")
+
                 for url in set(urls):
                     cite(driver, access_date, url, _type)
 
